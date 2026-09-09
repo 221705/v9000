@@ -32,7 +32,11 @@ foreach ($letter in 'S','T','U','V','W') {
     $null = mountvol $drv /S
     if (Test-Path "$drv\") { $esp = $drv; break }
 }
-if (-not $esp) { $esp = 'S:' }
+if (-not $esp) { Fail 'Could not mount the EFI System Partition (ESP). Nothing was changed.' }
+if (-not (Test-Path "$esp\EFI\Microsoft\Boot\bootmgfw.efi")) {
+    $null = mountvol "$esp\" /D
+    Fail 'ESP mounted but Windows boot files are missing. Unexpected partition layout - aborted, nothing was changed.'
+}
 Info "ESP mounted at $esp"
 
 $removed = @()

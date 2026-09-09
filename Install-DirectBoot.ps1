@@ -130,6 +130,7 @@ $orderStr = ''
 if ($fwTxt -match '(?s)displayorder\s+(.*?)\s*\r?\n\s*timeout') { $orderStr = $Matches[1] }
 elseif ($fwTxt -match '(?s)displayorder\s+(.*)$') { $orderStr = $Matches[1] }
 $curOrder = @($orderStr -split '\s+' | Where-Object { $_ -match '^\{[0-9a-fA-F-]+\}$' })
+if ($curOrder.Count -eq 0) { Fail 'Could not parse the firmware boot order. Aborted, nothing was changed.' }
 if ($TestMode) {
     $newOrder = @($curOrder | Where-Object { $_ -ne $gDirect }) + @($gDirect)
     $null = bcdedit /set '{fwbootmgr}' displayorder $newOrder
@@ -143,11 +144,27 @@ if ($TestMode) {
 }
 
 # ---- 9. Verify ----
+# NOTE: displayorder can span MULTIPLE lines - parse the whole block again.
 $verify = bcdedit /enum '{fwbootmgr}' | Out-String
+$verStr = ''
+if ($verify -match '(?s)displayorder\s+(.*?)\s*\r?\n\s*timeout') { $verStr = $Matches[1] }
+elseif ($verify -match '(?s)displayorder\s+(.*)$') { $verStr = $Matches[1] }
+$verOrder = @($verStr -split '\s+' | Where-Object { $_ -match '^\{[0-9a-fA-F-]+\}$' })
 Info ''
 Info '--- current {fwbootmgr} displayorder ---'
-foreach ($ln in ($verify -split "`r?`n")) {
-    if ($ln -match '^\s*displayorder\s+(.+)$') { Info ('  ' + $Matches[1]) }
+foreach ($g in $verOrder) { Info ('  ' + $g) }
+if ($TestMode) {
+    if ($verOrder.Count -gt 0 -and $verOrder[-1] -eq $gDirect) {
+        Ok 'Verified: direct entry is LAST in the boot order (test mode).'
+    } else {
+        Warn 'Could not verify the boot order; run "bcdedit /enum {fwbootmgr}" to check.'
+    }
+} else {
+    if ($verOrder.Count -gt 0 -and $verOrder[0] -eq $gDirect) {
+        Ok 'Verified: direct entry is FIRST in the boot order.'
+    } else {
+        Warn 'Could not verify the boot order; run "bcdedit /enum {fwbootmgr}" to check.'
+    }
 }
 
 $null = mountvol "$esp\" /D
