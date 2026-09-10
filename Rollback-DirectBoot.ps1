@@ -1,40 +1,21 @@
 # Rollback-DirectBoot.ps1
 # Default : removes the direct-boot entry + patched file only (shell fallback chain stays).
 # -Full   : also removes the shell unlock entry and all tool files (full uninstall).
-$ErrorActionPreference = 'Stop'
+#
+# All bcdedit text parsing lives in Bcd.Common.ps1 (language-independent) -
+# keep that file next to this script.
 param([switch]$Full)
-function Fail($msg) { Write-Host "[ERROR] $msg" -ForegroundColor Red; exit 1 }
-function Ok($msg)   { Write-Host "[OK] $msg" -ForegroundColor Green }
-function Info($msg) { Write-Host $msg }
+$ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'Bcd.Common.ps1')
 
-$descDirect = 'NVPermissive Direct Boot'
-$descShell  = 'NVPermissive 90HX Unlock'
-
-$id  = [Security.Principal.WindowsIdentity]::GetCurrent()
-$adm = New-Object Security.Principal.WindowsPrincipal($id)
-if (-not $adm.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+if (-not (Test-IsAdministrator)) {
     Fail 'This script must run as Administrator.'
 }
 
-function Find-Entry([string]$desc) {
-    $curId = $null
-    foreach ($ln in (bcdedit /enum firmware | Out-String -Stream)) {
-        if ($ln -match '^\s*identifier\s+(\{[0-9a-fA-F-]+\})') { $curId = $Matches[1] }
-        elseif ($ln -match ('description\s+' + [regex]::Escape($desc))) { return $curId }
-    }
-    return $null
-}
-
-$esp = $null
-foreach ($letter in 'S','T','U','V','W') {
-    $drv = "$letter`:"
-    if (Test-Path "$drv\") { continue }
-    $null = mountvol $drv /S
-    if (Test-Path "$drv\") { $esp = $drv; break }
-}
+$esp = Get-EspMount
 if (-not $esp) { Fail 'Could not mount the EFI System Partition (ESP). Nothing was changed.' }
 if (-not (Test-Path "$esp\EFI\Microsoft\Boot\bootmgfw.efi")) {
-    $null = mountvol "$esp\" /D
+    Remove-EspMount $esp
     Fail 'ESP mounted but Windows boot files are missing. Unexpected partition layout - aborted, nothing was changed.'
 }
 Info "ESP mounted at $esp"
@@ -42,7 +23,7 @@ Info "ESP mounted at $esp"
 $removed = @()
 
 # ---- direct entry + patched file ----
-$gDirect = Find-Entry $descDirect
+$gDirect = (Get-BcdEntryByDescription $descDirect).Id
 if ($gDirect) {
     $null = bcdedit /delete $gDirect /f
     Ok "Deleted boot entry: $gDirect ($descDirect)"
@@ -57,7 +38,7 @@ if (Test-Path "$esp\EFI\NVPermissive\NVPermissiveDirect.efi") {
 
 # ---- full uninstall: shell entry + tool files ----
 if ($Full) {
-    $gShell = Find-Entry $descShell
+    $gShell = (Get-BcdEntryByDescription $descShell).Id
     if ($gShell) {
         $null = bcdedit /delete $gShell /f
         Ok "Deleted boot entry: $gShell ($descShell)"
@@ -73,12 +54,7 @@ if ($Full) {
 }
 
 # ---- clean displayorder of deleted entries ----
-# NOTE: displayorder in bcdedit output can span MULTIPLE lines - parse the whole block.
-$fwTxt = bcdedit /enum '{fwbootmgr}' | Out-String
-$orderStr = ''
-if ($fwTxt -match '(?s)displayorder\s+(.*?)\s*\r?\n\s*timeout') { $orderStr = $Matches[1] }
-elseif ($fwTxt -match '(?s)displayorder\s+(.*)$') { $orderStr = $Matches[1] }
-$curOrder = @($orderStr -split '\s+' | Where-Object { $_ -match '^\{[0-9a-fA-F-]+\}$' })
+$curOrder = Get-BcdFwbootmgrDisplayOrder
 $newOrder = @($curOrder | Where-Object { $removed -notcontains $_ })
 if ($newOrder.Count -ne $curOrder.Count) {
     $null = bcdedit /set '{fwbootmgr}' displayorder $newOrder
@@ -87,7 +63,7 @@ if ($newOrder.Count -ne $curOrder.Count) {
     Info 'Boot order unchanged (nothing to clean).'
 }
 
-$null = mountvol "$esp\" /D
+Remove-EspMount $esp
 Info ''
 Info '=================== ROLLBACK DONE ==================='
 if ($Full) {
