@@ -1,0 +1,12 @@
+
+???????
+---------------------
+???                  {fwbootmgr}
+displayorder            {bootmgr}
+                        {7ef02d7e-ab93-11f1-8076-afebfdddbedb}
+                        {a7762a77-b97a-11f0-805b-806e6f6e6963}
+                        {82d15a11-ab95-11f1-8077-806e6f6e6963}
+                        {735e2b0d-ae03-11f1-80a0-806e6f6e6963}
+                        {735e2b0e-ae03-11f1-80a0-806e6f6e6963}
+                        {735e2b0f-ae03-11f1-80a0-806e6f6e6963}
+timeout                 3

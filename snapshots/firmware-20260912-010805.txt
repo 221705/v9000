@@ -1,0 +1,39 @@
+
+???????
+---------------------
+???                  {a5a30fa2-3d06-4e9f-b5f4-a01df9d1fcba}
+displayorder            {9dea862c-5cdd-4e70-acc1-f32b344d4795}
+                        {a7762a77-b97a-11f0-805b-806e6f6e6963}
+                        {82d15a11-ab95-11f1-8077-806e6f6e6963}
+timeout                 3
+
+Windows ?????
+--------------------
+???                  {9dea862c-5cdd-4e70-acc1-f32b344d4795}
+device                  partition=S:
+path                    \EFI\Microsoft\Boot\bootmgfw.efi
+description             Windows Boot Manager
+locale                  zh-CN
+inherit                 {7ea2e1ac-2e61-4728-aaa3-896d9d0a9f0e}
+nointegritychecks       No
+default                 {a4fef264-82ad-11f1-96d1-d21066ffee65}
+resumeobject            {a4fef263-82ad-11f1-96d1-d21066ffee65}
+displayorder            {a4fef264-82ad-11f1-96d1-d21066ffee65}
+toolsdisplayorder       {b2721d73-1db4-4c62-bf78-c548a880142d}
+timeout                 30
+
+??????(101fffff)
+-------------------------------
+???                  {2b19bec3-abfc-11f1-8079-806e6f6e6963}
+description             Hard Drive
+
+??????(101fffff)
+-------------------------------
+???                  {82d15a11-ab95-11f1-8077-806e6f6e6963}
+description             Hard Drive
+
+??????(101fffff)
+-------------------------------
+???                  {a7762a77-b97a-11f0-805b-806e6f6e6963}
+device                  partition=G:
+description             UEFI: ADATA USB Flash Drive 1100, Partition 1

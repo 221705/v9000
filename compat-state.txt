@@ -1,0 +1,3 @@
+OLD_PATH=\EFI\Microsoft\Boot\bootmgfw.efi
+BACKUP_GUID={7ef02d7e-ab93-11f1-8076-afebfdddbedb}
+TIMESTAMP=20260912-010942
